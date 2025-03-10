@@ -1,53 +1,30 @@
-```
-import pandas as pd
+```import pandas as pd
 
-# 仮のデータ（サービス2個分）
-num_services = 2  # サービスの数
-
+# サンプルデータ
 data = {
-    "データ種別": ["前月減少率"] + [f"サービス{i} ユーザ数" for i in range(1, num_services + 1)],
-    1: [None] + [100 - i for i in range(num_services)],  # 初期ユーザ数を適当に設定
-    2: [0.6] + [None] * num_services,
-    3: [0.8] + [None] * num_services,
+    "期間": ["A_202405", "A_202406", "A_202407", "B_202405"],
+    "hoge": [5, 15, 25, 35],
 }
 
 df = pd.DataFrame(data)
 
-# 数値データ部分のみ処理するためにコピー
-df_numeric = df.iloc[1:, 1:].copy()
+# "期間" を分割して "グループ"（A, B）と "年月"（YYYYMM）を抽出
+df["グループ"] = df["期間"].str.split("_").str[0]  # "A" または "B"
+df["年月"] = df["期間"].str.extract(r"(\d{6})")[0]  # "YYYYMM"
 
-# 予測値を格納するためのリスト
-predicted_data = []
+# "YYYYMM" を日付型に変換（集計しやすくするため）
+df["年月"] = pd.to_datetime(df["年月"], format="%Y%m")
 
-# すべてのサービスに対して処理
-for idx, service_name in enumerate(df.iloc[1:, 0]):  # `前月減少率` を除いたサービス名を取得
-    initial_value = pd.to_numeric(df_numeric.iloc[idx, 0], errors="coerce")  # 初期値を数値に変換
-    if pd.isna(initial_value):  # 初期値がNaNならスキップ
-        continue
+# 各グループごとに最小・最大の年月を求める
+grouped = df.groupby("グループ")["年月"].agg([min, max]).reset_index()
 
-    predicted_values = [initial_value]  # 予測値リスト
+# "YYYY/MM〜YYYY/MM" の形式に変換
+grouped["期間"] = grouped["min"].dt.strftime("%Y/%m") + "〜" + grouped["max"].dt.strftime("%Y/%m")
 
-    print(predicted_values)
+# 必要なカラムを選択
+result_df = grouped[["グループ", "期間"]].rename(columns={"グループ": "A"})
 
-    for col in range(2, df_numeric.shape[1] + 1):
-        rate = pd.to_numeric(df.iloc[0, col], errors="coerce")  # 前月減少率を数値に変換
-        # print(df_numeric.iloc[0, :])
-        print("rate",rate)
-        if pd.isna(rate):  # 減少率がNaNならスキップ
-            predicted_values.append(None)
-        else:
-            predicted_values.append(predicted_values[-1] * rate)
-            print(predicted_values)
-
-    # 予測データをリストに追加
-    predicted_data.append(["予測 " + service_name] + predicted_values)
-
-# 予測行をデータフレームとして作成
-df_pred = pd.DataFrame(predicted_data, columns=df.columns)
-
-# 元のデータフレームと結合
-df = pd.concat([df, df_pred], ignore_index=True)
-
-# 出力
-print(df)
+# 結果表示
+print(grouped)
+print(result_df)
 ```
