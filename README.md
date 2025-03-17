@@ -1,10 +1,23 @@
 ```
-import re
+import pandas as pd
+import streamlit as st
 
-data = ["24ヶ月", "60ヶ月", "12ヶ月"]
+# データフレームの作成
+df = pd.DataFrame({
+    "項目": ["A", "B", "C", "D"],
+    "パーセント": [10.34, 9.57, 15.2, 7.45],  # 数値型
+})
 
-# 数値を抽出してリスト化し、ソート
-sorted_data = sorted(data, key=lambda s: int(re.search(r'\d+', s).group()))
+# Streamlit アプリ
+st.dataframe(
+    df,
+    column_config={
+        "パーセント": st.column_config.NumberColumn(
+            "パーセント (%)",
+            format="%.2f%%"
+        )
+    }
+)
 
-print(sorted_data)  # ['12ヶ月', '24ヶ月', '60ヶ月']
+
 ```
