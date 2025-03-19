@@ -1,3 +1,4 @@
+
 ```
 import pandas as pd
 import streamlit as st
@@ -21,3 +22,5 @@ st.dataframe(
 
 
 ```
+
+![Uploading スクリーンショット 2025-03-19 11.27.25.png…]()
