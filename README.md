@@ -22,5 +22,6 @@ st.dataframe(
 
 
 ```
+<img width="796" alt="スクリーンショット 2025-03-19 11 27 25" src="https://github.com/user-attachments/assets/e0e821c8-61f4-4f4a-b63e-d569b59b27ec" />
 
 ![Uploading スクリーンショット 2025-03-19 11.27.25.png…]()
