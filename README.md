@@ -1,5 +1,5 @@
 ```
-import pandas as pd
+port pandas as pd
 import streamlit as st
 
 # データフレームの作成
