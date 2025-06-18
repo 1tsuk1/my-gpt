@@ -1,44 +1,119 @@
 ```
-def apply_transformation_rules(group_name, sub_items):
+import pandas as pd
+
+def transform_dataframe(df, column_name='category'):
     """
-    共通の変換ルールを適用
+    データフレームの指定列を階層ルールに基づいて整形する
+    他の列も保持する
     
     ルール:
+    - 「L」は階層を表す
+    - 「L」が1つもないものを「グループ」、「L」が1つのものを「サブグループ」とする
     - グループ配下のサブグループが1つだけの場合：
-      * L行をLなしの行に変換（サブグループをグループに昇格）
+      * L行をLなしの行に変換
       * グループの全行を削除
       * LL行をL行に変換
+    """
+    # 元のデータフレームのコピーを作成
+    df_copy = df.copy()
     
-    Returns:
-        (transformed_categories, indices_to_keep)
-        - transformed_categories: 変換後のカテゴリ名のリスト
-        - indices_to_keep: 保持するインデックスのリスト（0=グループ, 1以降=サブ項目）
+    # 処理対象の列データ
+    data = df_copy[column_name].tolist()
+    
+    # 結果を格納するリスト（インデックスも保持）
+    result_indices = []  # 元のDataFrameのインデックス
+    result_values = []   # 変換後の値
+    
+    i = 0
+    while i < len(data):
+        current = data[i]
+        current_idx = df_copy.index[i]
+        
+        # グループ（Lで始まらない）の場合
+        if not current.startswith('L'):
+            group_name = current
+            group_idx = current_idx
+            i += 1
+            
+            # このグループに属する項目を収集
+            sub_items = []
+            sub_indices = []
+            while i < len(data) and data[i].startswith('L'):
+                sub_items.append(data[i])
+                sub_indices.append(df_copy.index[i])
+                i += 1
+            
+            # グループとその配下を処理
+            processed_items, processed_indices = process_group(
+                group_name, group_idx, sub_items, sub_indices
+            )
+            result_indices.extend(processed_indices)
+            result_values.extend(processed_items)
+        else:
+            # 独立したL/LL項目（通常はグループから処理するためここには来ない）
+            result_indices.append(current_idx)
+            result_values.append(current)
+            i += 1
+    
+    # 新しいDataFrameを作成（保持するインデックスのみ）
+    result_df = df_copy.loc[result_indices].copy()
+    result_df[column_name] = result_values
+    
+    # インデックスをリセット（必要に応じて）
+    result_df = result_df.reset_index(drop=True)
+    
+    return result_df
+
+def process_group(group_name, group_idx, sub_items, sub_indices):
+    """
+    グループとその配下の項目を処理する
+    Returns: (処理後の値のリスト, 対応するインデックスのリスト)
     """
     if not sub_items:
-        return [group_name], [0]
+        return [group_name], [group_idx]
     
-    # サブグループとLL項目を分離
+    # サブグループ（L で始まり、LL でない）を抽出
     subgroups = []
     subgroup_indices = []
-    for i, item in enumerate(sub_items, 1):
-        if is_subgroup(item):
+    ll_items = []
+    ll_indices = []
+    
+    for item, idx in zip(sub_items, sub_indices):
+        if item.startswith('L ') and not item.startswith('LL '):
             subgroups.append(item)
-            subgroup_indices.append(i)
+            subgroup_indices.append(idx)
+        elif item.startswith('LL '):
+            ll_items.append(item)
+            ll_indices.append(idx)
     
     # サブグループが1つだけの場合
     if len(subgroups) == 1:
         subgroup = subgroups[0]
         subgroup_idx = subgroup_indices[0]
-        subgroup_name = extract_subgroup_name(subgroup)
         
-        # 変換後のカテゴリ（グループは削除、サブグループがグループに昇格）
-        result_categories = [subgroup_name]
-        indices_to_keep = [subgroup_idx]  # サブグループのインデックスを使用
+        # サブグループ名を取得（"L " を除去してLなしの行に変換）
+        subgroup_name_without_l = subgroup[2:]  # "L web広告e_fuga" → "web広告e_fuga"
         
-        # LL項目を処理
-        for i, item in enumerate(sub_items, 1):
-            if is_ll_item(item):
-                result_categories.append(convert_ll_to_l(item))
-                indices_to_keep.append(i)
+        # 結果の値とインデックス（グループ行は削除するので含めない）
+        result_values = [subgroup_name_without_l]
+        result_indices = [subgroup_idx]  # サブグループのインデックスを使用
         
-        return result_categories, indices_to_keep```
+        # LL項目を処理（LLをLに変換）
+        for ll_item, ll_idx in zip(ll_items, ll_indices):
+            # "LL " を "L " に置換
+            l_item = ll_item.replace('LL ', 'L ', 1)
+            result_values.append(l_item)
+            result_indices.append(ll_idx)
+        
+        return result_values, result_indices
+    
+    # サブグループが複数ある場合、または0個の場合は変更なし
+    result_values = [group_name]
+    result_indices = [group_idx]
+    
+    # すべてのサブ項目を追加
+    result_values.extend(sub_items)
+    result_indices.extend(sub_indices)
+    
+    return result_values, result_indices
+```
