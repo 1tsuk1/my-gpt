@@ -1,119 +1,63 @@
-```
-import pandas as pd
+# Copilot PR レビュープロンプト指示（Streamlit アプリ用）
 
-def transform_dataframe(df, column_name='category'):
-    """
-    データフレームの指定列を階層ルールに基づいて整形する
-    他の列も保持する
-    
-    ルール:
-    - 「L」は階層を表す
-    - 「L」が1つもないものを「グループ」、「L」が1つのものを「サブグループ」とする
-    - グループ配下のサブグループが1つだけの場合：
-      * L行をLなしの行に変換
-      * グループの全行を削除
-      * LL行をL行に変換
-    """
-    # 元のデータフレームのコピーを作成
-    df_copy = df.copy()
-    
-    # 処理対象の列データ
-    data = df_copy[column_name].tolist()
-    
-    # 結果を格納するリスト（インデックスも保持）
-    result_indices = []  # 元のDataFrameのインデックス
-    result_values = []   # 変換後の値
-    
-    i = 0
-    while i < len(data):
-        current = data[i]
-        current_idx = df_copy.index[i]
-        
-        # グループ（Lで始まらない）の場合
-        if not current.startswith('L'):
-            group_name = current
-            group_idx = current_idx
-            i += 1
-            
-            # このグループに属する項目を収集
-            sub_items = []
-            sub_indices = []
-            while i < len(data) and data[i].startswith('L'):
-                sub_items.append(data[i])
-                sub_indices.append(df_copy.index[i])
-                i += 1
-            
-            # グループとその配下を処理
-            processed_items, processed_indices = process_group(
-                group_name, group_idx, sub_items, sub_indices
-            )
-            result_indices.extend(processed_indices)
-            result_values.extend(processed_items)
-        else:
-            # 独立したL/LL項目（通常はグループから処理するためここには来ない）
-            result_indices.append(current_idx)
-            result_values.append(current)
-            i += 1
-    
-    # 新しいDataFrameを作成（保持するインデックスのみ）
-    result_df = df_copy.loc[result_indices].copy()
-    result_df[column_name] = result_values
-    
-    # インデックスをリセット（必要に応じて）
-    result_df = result_df.reset_index(drop=True)
-    
-    return result_df
+このリポジトリでは、Python および Streamlit を使った Web アプリケーションを開発しています。  
+以下の指示は、Pull Request のコードレビュー時に GitHub Copilot に適切なレビューコメントを生成させるためのガイドラインです。
 
-def process_group(group_name, group_idx, sub_items, sub_indices):
-    """
-    グループとその配下の項目を処理する
-    Returns: (処理後の値のリスト, 対応するインデックスのリスト)
-    """
-    if not sub_items:
-        return [group_name], [group_idx]
-    
-    # サブグループ（L で始まり、LL でない）を抽出
-    subgroups = []
-    subgroup_indices = []
-    ll_items = []
-    ll_indices = []
-    
-    for item, idx in zip(sub_items, sub_indices):
-        if item.startswith('L ') and not item.startswith('LL '):
-            subgroups.append(item)
-            subgroup_indices.append(idx)
-        elif item.startswith('LL '):
-            ll_items.append(item)
-            ll_indices.append(idx)
-    
-    # サブグループが1つだけの場合
-    if len(subgroups) == 1:
-        subgroup = subgroups[0]
-        subgroup_idx = subgroup_indices[0]
-        
-        # サブグループ名を取得（"L " を除去してLなしの行に変換）
-        subgroup_name_without_l = subgroup[2:]  # "L web広告e_fuga" → "web広告e_fuga"
-        
-        # 結果の値とインデックス（グループ行は削除するので含めない）
-        result_values = [subgroup_name_without_l]
-        result_indices = [subgroup_idx]  # サブグループのインデックスを使用
-        
-        # LL項目を処理（LLをLに変換）
-        for ll_item, ll_idx in zip(ll_items, ll_indices):
-            # "LL " を "L " に置換
-            l_item = ll_item.replace('LL ', 'L ', 1)
-            result_values.append(l_item)
-            result_indices.append(ll_idx)
-        
-        return result_values, result_indices
-    
-    # サブグループが複数ある場合、または0個の場合は変更なし
-    result_values = [group_name]
-    result_indices = [group_idx]
-    
-    # すべてのサブ項目を追加
-    result_values.extend(sub_items)
-    result_indices.extend(sub_indices)
-    
-    return result_values, result_indices
-```
+---
+
+## 🎯 Copilot に求めるレビュー観点
+
+Copilot には以下の観点でレビューコメントを行ってください。
+
+### ✅ Streamlit に関するレビュー項目
+
+- UI部品（`st.sidebar`, `st.selectbox`, `st.file_uploader` など）が適切に使用されているか
+- `st.session_state` の適切な使用と状態管理が行われているか
+- 不要な再実行やレンダリングの無駄が発生していないか（`st.form`, `@st.cache_data` の活用）
+- レイアウト（`st.columns`, `st.container`など）の過不足、可読性に問題がないか
+- UIコンポーネントと処理ロジックが適切に分離されているか（肥大化した関数の分割提案）
+
+### ✅ Pythonコードの一般的なレビュー項目
+
+- PEP8 に準拠した読みやすいコードスタイルか
+- 変数名・関数名が意味を持っているか
+- 適切なエラーハンドリングがされているか（例：ファイル読み込みやAPI処理時）
+- 不要なコードやコメントが残っていないか
+- 再利用可能な処理が関数化・モジュール化されているか
+
+---
+
+## 🚫 Copilot に避けてほしいレビューコメント
+
+- Streamlit とは関係のない他フレームワーク（Flask, Djangoなど）の知識に基づく指摘
+- CLI アプリ向けの視点（`input()`, `print()`）を前提とした提案
+- 主観的すぎる表現（例：「この書き方は好きじゃない」など）
+- 意図が明確でないあいまいな指摘
+
+---
+
+## 💡 コメント文のスタイル例
+
+### 良い例（推奨される形式）
+
+- 「この関数は複雑なので、役割ごとに分割することを検討してください」
+- 「`st.session_state` を使うことで状態管理を明示できます」
+- 「このループは `@st.cache_data` を使ってキャッシュすると、再実行時のパフォーマンスが向上します」
+- 「このファイルは 300 行を超えており、機能ごとにモジュールを分割するのが望ましいです」
+
+### 悪い例（避けるべき形式）
+
+- 「何か変だと思います」
+- 「Flaskだとこうするけどなあ」
+- 「別の方法もあります（詳細なし）」
+- 「まあいいんじゃないですか」
+
+---
+
+## 📘 Copilot への一言メッセージ
+
+> このリポジトリは Streamlit を使った Web アプリケーションです。  
+> PR のレビューでは、UI構成・状態管理・再実行の制御・レイアウト・コードスタイルに注目して、**客観的かつ建設的なレビューコメントを提案してください。**  
+> なお、Streamlit の特性を理解し、それに合ったアドバイスを優先してください。
+
+
