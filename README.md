@@ -1,4 +1,23 @@
 ```
+# CSVファイルからデータを読み込む場合
+import pandas as pd
+
+# データの読み込み
+df = pd.read_csv('your_data.csv')
+
+# 分析の実行
+analyzer = SeasonalAnalysis(df, date_col='日付列名', value_col='収益列名')
+
+# 各種分析の実行
+analyzer.plot_time_series()
+decomposition = analyzer.seasonal_decomposition()
+seasonal_index = analyzer.analyze_seasonal_patterns()
+analyzer.moving_average_analysis()
+analyzer.autocorrelation_analysis()
+strength = analyzer.calculate_seasonal_strength()
+```
+
+```
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
